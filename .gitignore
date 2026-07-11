@@ -1,0 +1,32 @@
+# Virtual Environment
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Test Cache
+.pytest_cache/
+
+# IDE Settings
+.idea/
+.vscode/
+
+# Environment Variables
+.env
+
+# Logs
+logs/
+*.log
+
+# Datasets (only track metadata)
+datasets/raw/
+datasets/processed/
+datasets/features/
+
+# Models
+models/
+
+# OS Files
+.DS_Store
+Thumbs.db

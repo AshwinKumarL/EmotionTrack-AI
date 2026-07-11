@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic>=2.0
+pydantic-settings
+transformers
+torch
+pytest
+httpx
+librosa
