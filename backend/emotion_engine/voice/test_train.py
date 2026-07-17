@@ -28,7 +28,7 @@ def mock_dataset_and_paths(tmp_path):
     emotions = ["happy", "sad", "neutral", "calm", "angry", "fearful", "disgust", "surprised", "happy", "sad"]
     
     for idx, emotion in enumerate(emotions):
-        data = np.zeros((128, 94), dtype=np.float32)
+        data = np.random.randn(128, 94).astype(np.float32)
         npy_path = features_dir / f"sample_{idx}.npy"
         np.save(str(npy_path), data)
         npy_files.append(npy_path)
