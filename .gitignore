@@ -25,7 +25,6 @@ datasets/processed/
 datasets/features/
 
 # Models
-models/
 
 # OS Files
 .DS_Store
