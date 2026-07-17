@@ -361,19 +361,28 @@ def run_training(
 # Main CLI Entry Point (for manual execution & smoke tests)
 # =====================================================================
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> Tuple[argparse.ArgumentParser, argparse.Namespace]:
     parser = argparse.ArgumentParser(description="Voice Emotion Recognition Training CLI")
     parser.add_argument(
         "--smoke-test",
         action="store_true",
         help="Run a minimal smoke test (1 epoch, 1 batch) to verify the training pipeline."
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--train",
+        action="store_true",
+        help="Run the full training pipeline on the entire dataset."
+    )
+    return parser, parser.parse_args()
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    parser, args = parse_args()
     
+    if not args.smoke_test and not args.train:
+        parser.print_help()
+        sys.exit(0)
+        
     # Configure path defaults relative to this file
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
     index_csv = root_dir / "datasets" / "features" / "metadata" / "feature_index.csv"
@@ -419,9 +428,10 @@ if __name__ == "__main__":
         if args.smoke_test:
             run_training(model, dataset, train_config, smoke_test=True)
             print("Smoke test successfully completed.")
-        else:
-            print("Training pipeline validated. Run with --smoke-test to execute a smoke test run.")
-            print("Otherwise, wait for instructions to begin full training.")
+        elif args.train:
+            print("Starting full model training...")
+            run_training(model, dataset, train_config, smoke_test=False)
+            print("Model training successfully completed.")
 
     except Exception as e:
         print(f"Fatal Error during training initialization: {e}", file=sys.stderr)
