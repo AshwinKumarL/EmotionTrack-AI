@@ -68,7 +68,8 @@ def test_training_config_validation(tmp_path):
             random_seed=42,
             device="cpu",
             num_workers=0,
-            model_save_path=valid_path
+            model_save_path=valid_path,
+            patience=5
         )
         
     # 2. Invalid validation split bounds
@@ -82,7 +83,8 @@ def test_training_config_validation(tmp_path):
             random_seed=42,
             device="cpu",
             num_workers=0,
-            model_save_path=valid_path
+            model_save_path=valid_path,
+            patience=5
         )
         
     # 3. Invalid model save path type
@@ -96,7 +98,23 @@ def test_training_config_validation(tmp_path):
             random_seed=42,
             device="cpu",
             num_workers=0,
-            model_save_path="string_instead_of_path_object.pth"
+            model_save_path="string_instead_of_path_object.pth",
+            patience=5
+        )
+
+    # 4. Invalid patience parameter
+    with pytest.raises(TrainingConfigurationError):
+        VoiceTrainingConfig(
+            batch_size=16,
+            epochs=10,
+            learning_rate=0.001,
+            weight_decay=0.0,
+            validation_split=0.2,
+            random_seed=42,
+            device="cpu",
+            num_workers=0,
+            model_save_path=valid_path,
+            patience=-1  # must be positive
         )
 
 
@@ -116,7 +134,8 @@ def test_dataset_splitting_and_loaders(mock_dataset_and_paths):
         random_seed=123,
         device="cpu",
         num_workers=0,
-        model_save_path=model_save_path
+        model_save_path=model_save_path,
+        patience=5
     )
     
     train_loader, val_loader = setup_data_loaders(dataset, train_config)
@@ -161,7 +180,8 @@ def test_train_loop_step(mock_dataset_and_paths):
         random_seed=42,
         device="cpu",
         num_workers=0,
-        model_save_path=model_save_path
+        model_save_path=model_save_path,
+        patience=5
     )
     
     # Capture initial weights of a model parameter to check update
@@ -207,7 +227,8 @@ def test_checkpoint_saving(mock_dataset_and_paths):
         random_seed=42,
         device="cpu",
         num_workers=0,
-        model_save_path=model_save_path
+        model_save_path=model_save_path,
+        patience=5
     )
     
     # Execute normal training (epochs=1)
@@ -220,3 +241,43 @@ def test_checkpoint_saving(mock_dataset_and_paths):
     # Verify we can load the state dict back
     state_dict = torch.load(str(model_save_path))
     assert "classifier.1.weight" in state_dict or "classifier.4.weight" in state_dict
+
+
+def test_early_stopping_triggered(mock_dataset_and_paths):
+    """Verify that training loop terminates early when validation loss fails to improve."""
+    index_path, features_dir, model_save_path = mock_dataset_and_paths
+    
+    dataset_config = VoiceDatasetConfig(index_path=index_path, features_dir=features_dir)
+    dataset = EmotionDataset(dataset_config)
+    
+    model_config = VoiceModelConfig(
+        num_classes=8,
+        input_channels=1,
+        dropout_rate=0.5,
+        filter_sizes=(8,),
+        kernel_sizes=(3,),
+        pool_sizes=(2,),
+        hidden_size=16
+    )
+    model = EmotionCNN(model_config)
+    
+    # Create configuration with low patience
+    train_config = VoiceTrainingConfig(
+        batch_size=4,
+        epochs=10,
+        learning_rate=0.001,
+        weight_decay=0.0,
+        validation_split=0.2,
+        random_seed=42,
+        device="cpu",
+        num_workers=0,
+        model_save_path=model_save_path,
+        patience=2  # stop after 2 epochs without improvement
+    )
+
+    # We run training. Because the dataset has dummy identical samples (all zeros),
+    # validation loss will plateau quickly, triggering early stopping.
+    history = run_training(model, dataset, train_config, smoke_test=False)
+    
+    # The history epochs should be less than configured 10
+    assert len(history["train_loss"]) < 10, f"Early stopping did not trigger. Epochs executed: {len(history['train_loss'])}"

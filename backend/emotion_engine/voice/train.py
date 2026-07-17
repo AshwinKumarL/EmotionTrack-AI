@@ -56,6 +56,7 @@ class VoiceTrainingConfig:
     device: str
     num_workers: int
     model_save_path: Path
+    patience: int
 
     def __post_init__(self) -> None:
         """
@@ -87,6 +88,9 @@ class VoiceTrainingConfig:
 
         if not isinstance(self.device, str):
             raise TrainingConfigurationError("device must be a string (e.g., 'cpu' or 'cuda').")
+
+        if not isinstance(self.patience, int) or self.patience <= 0:
+            raise TrainingConfigurationError("patience must be a positive integer.")
 
 
 # =====================================================================
@@ -202,6 +206,7 @@ def run_training(
     }
 
     best_val_loss = float("inf")
+    epochs_without_improvement = 0
     epochs_to_run = 1 if smoke_test else config.epochs
 
     print(f"Starting training on device: {device}")
@@ -312,12 +317,15 @@ def run_training(
         if not smoke_test:
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
+                epochs_without_improvement = 0
                 try:
                     config.model_save_path.parent.mkdir(parents=True, exist_ok=True)
                     torch.save(model.state_dict(), str(config.model_save_path))
                     best_saved = True
                 except Exception as e:
                     print(f"Warning: Failed to save best model checkpoint: {e}", file=sys.stderr)
+            else:
+                epochs_without_improvement += 1
         else:
             # Simulate checkpoint save in smoke test outputs
             best_saved = True
@@ -340,6 +348,11 @@ def run_training(
         print(f"Best Model Saved   : {'Yes' if best_saved else 'No'}")
         print(f"Epoch Time         : {epoch_elapsed:.2f}s")
         print("==================================================")
+
+        # Early stopping verification check
+        if not smoke_test and epochs_without_improvement >= config.patience:
+            print(f"\nEarly stopping triggered: validation loss did not improve for {config.patience} consecutive epochs.")
+            break
 
     return history
 
@@ -392,14 +405,15 @@ if __name__ == "__main__":
         # 3. Initialize training config
         train_config = VoiceTrainingConfig(
             batch_size=32,
-            epochs=25,
+            epochs=45,
             learning_rate=0.001,
             weight_decay=0.0001,
             validation_split=0.2,
             random_seed=42,
             device="cuda" if torch.cuda.is_available() else "cpu",
             num_workers=0,  # Set to 0 to avoid subprocess issues on standard CLI runs
-            model_save_path=model_save
+            model_save_path=model_save,
+            patience=7
         )
 
         if args.smoke_test:
