@@ -78,6 +78,7 @@ def record_audio(duration: float = 3.0, sample_rate: int = 16000) -> Path:
 def load_model(model_path: Path, num_classes: int, device: torch.device) -> EmotionCNN:
     """
     Recreates the CNN architecture and loads the saved model state dict weights.
+    Used for VM/1 checkpoints (bare state_dict format).
     
     Args:
         model_path (Path): Path to the saved weights file (.pth).
@@ -111,6 +112,47 @@ def load_model(model_path: Path, num_classes: int, device: torch.device) -> Emot
         return model
     except Exception as e:
         print(f"Error loading trained model weights: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def load_model_v2(model_path: Path, device: torch.device) -> EmotionCNN:
+    """
+    Loads the VM/2 model from a metadata-rich checkpoint.
+    
+    VM/2 checkpoints contain model_config, emotions, epoch, and optimizer
+    state alongside model weights, unlike VM/1's bare state_dict format.
+    
+    Args:
+        model_path (Path): Path to best_voice_model_v2.pth.
+        device (torch.device): Target device.
+        
+    Returns:
+        EmotionCNN: Loaded model in eval mode.
+    """
+    if not model_path.exists():
+        print(f"Error: VM/2 checkpoint not found at: '{model_path}'", file=sys.stderr)
+        print("Please train VM/2 first by running: python backend/emotion_engine/voice/train_v2.py --train", file=sys.stderr)
+        sys.exit(1)
+        
+    try:
+        checkpoint = torch.load(str(model_path), map_location=device)
+        cfg = checkpoint["model_config"]
+        model_config = VoiceModelConfig(
+            num_classes=cfg["num_classes"],
+            input_channels=cfg["input_channels"],
+            dropout_rate=cfg["dropout_rate"],
+            filter_sizes=tuple(cfg["filter_sizes"]),
+            kernel_sizes=tuple(cfg["kernel_sizes"]),
+            pool_sizes=tuple(cfg["pool_sizes"]),
+            hidden_size=cfg["hidden_size"]
+        )
+        model = EmotionCNN(model_config)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.to(device)
+        model.eval()
+        return model
+    except Exception as e:
+        print(f"Error loading VM/2 model weights: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -237,6 +279,13 @@ def parse_args() -> argparse.Namespace:
         type=str,
         help="Path to an existing WAV audio file for emotion prediction."
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["VM1", "VM2"],
+        default="VM1",
+        help="Select which voice model to use. VM1 = 8-class (default), VM2 = 5-class."
+    )
     return parser.parse_args()
 
 
@@ -245,14 +294,23 @@ def main() -> None:
     
     # Configure path defaults
     root_dir = Path(__file__).resolve().parent.parent.parent.parent
-    model_save = root_dir / "models" / "best_voice_model.pth"
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    label_encoder = LabelEncoder()
-    
-    # Recreate the model based on label encoder classes
-    num_classes = label_encoder.num_classes()
-    model = load_model(model_save, num_classes, device)
+
+    # Select model version
+    if args.model == "VM2":
+        # VM/2: 5-class conversational emotion model
+        vm2_emotions = ["happy", "sad", "angry", "fearful", "calm"]
+        model_save = root_dir / "models" / "best_voice_model_v2.pth"
+        label_encoder = LabelEncoder(emotions=vm2_emotions)
+        model = load_model_v2(model_save, device)
+        print(f"[Using Voice Model V2 — 5-class]")
+    else:
+        # VM/1: 8-class default (original behavior)
+        model_save = root_dir / "models" / "best_voice_model.pth"
+        label_encoder = LabelEncoder()
+        num_classes = label_encoder.num_classes()
+        model = load_model(model_save, num_classes, device)
+        print(f"[Using Voice Model V1 — 8-class]")
 
     if args.mic:
         audio_path = record_audio(duration=3.0, sample_rate=16000)

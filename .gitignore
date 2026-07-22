@@ -19,12 +19,39 @@ __pycache__/
 logs/
 *.log
 
-# Datasets (only track metadata)
+# ============================================
+# Datasets - Raw, Processed, and Features
+# ============================================
+# Raw audio datasets (stored on Google Drive)
 datasets/raw/
-datasets/processed/
-datasets/features/
 
-# Models
+# Processed/augmented datasets (stored on Google Drive)
+datasets/processed/
+
+# Extracted Mel spectrogram features (stored on Google Drive)
+datasets/features/mel/
+
+# NOTE: datasets/features/metadata/ is NOT ignored.
+# feature_index.csv and feature_index_v2.csv are tracked
+# and required by training scripts.
+
+# ============================================
+# Models - Trained weights and HuggingFace cache
+# ============================================
+models/
+
+# ============================================
+# Reports - Generated evaluation reports
+# ============================================
+reports/
+
+# ============================================
+# Test audio files (generated during testing)
+# ============================================
+tests/test_voice/*.wav
+
+# Documentation audio examples (stored on Google Drive)
+docs/preprocessing_examples/*.wav
 
 # OS Files
 .DS_Store
