@@ -23,12 +23,12 @@ import sys
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import random_split, Subset
 from tqdm import tqdm
 
 # Setup path manipulation so the script can be run directly from any directory
@@ -36,7 +36,7 @@ project_root = str(Path(__file__).resolve().parent.parent.parent.parent)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from backend.emotion_engine.voice.dataset import VoiceDatasetConfig, EmotionDataset, LabelEncoder
+from backend.emotion_engine.voice.dataset import VoiceDatasetConfig, EmotionDataset
 from backend.emotion_engine.voice.model import VoiceModelConfig, EmotionCNN
 from backend.emotion_engine.voice.train import VoiceTrainingConfig, setup_data_loaders, TrainingError
 

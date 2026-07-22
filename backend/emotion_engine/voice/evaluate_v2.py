@@ -17,7 +17,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 import numpy as np
 import torch
@@ -39,7 +39,6 @@ from backend.emotion_engine.voice.dataset import VoiceDatasetConfig, EmotionData
 from backend.emotion_engine.voice.model import VoiceModelConfig, EmotionCNN
 from backend.emotion_engine.voice.train import VoiceTrainingConfig, setup_data_loaders
 from backend.emotion_engine.voice.evaluate import (
-    EvaluationError,
     ModelLoadError,
     DatasetLoadError,
     EvaluationRuntimeError,

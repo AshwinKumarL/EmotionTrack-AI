@@ -160,11 +160,15 @@ def test_evaluation_pipeline_success(mock_evaluation_environment):
     
     metrics = run_evaluation(config)
     
-    # Assert metric fields
+    # Assert metric fields exist and are in valid range
     assert "accuracy" in metrics
+    assert 0.0 <= metrics["accuracy"] <= 1.0
     assert "precision_macro" in metrics
+    assert 0.0 <= metrics["precision_macro"] <= 1.0
     assert "recall_macro" in metrics
+    assert 0.0 <= metrics["recall_macro"] <= 1.0
     assert "f1_macro" in metrics
+    assert 0.0 <= metrics["f1_macro"] <= 1.0
     
     # Verify outputs exist in the reports folder
     metrics_json = output_dir / "evaluation_metrics.json"
