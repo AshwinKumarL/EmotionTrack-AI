@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import Tuple
 import torch
 import torch.nn as nn
 
@@ -40,6 +40,8 @@ class VoiceModelConfig:
     kernel_sizes: Tuple[int, ...]
     pool_sizes: Tuple[int, ...]
     hidden_size: int
+    input_height: int = 128
+    input_width: int = 94
 
     def __post_init__(self) -> None:
         """
@@ -171,8 +173,7 @@ class EmotionCNN(nn.Module):
         to calculate the flattened dimension dynamically on startup.
         """
         with torch.no_grad():
-            # Input spectrogram shape is (B, C, H, W) = (1, config.input_channels, 128, 94)
-            dummy_input = torch.zeros(1, self.config.input_channels, 128, 94)
+            dummy_input = torch.zeros(1, self.config.input_channels, self.config.input_height, self.config.input_width)
             try:
                 dummy_output = self.feature_extractor(dummy_input)
             except Exception as e:
@@ -185,7 +186,7 @@ class EmotionCNN(nn.Module):
             if dummy_output.numel() == 0 or any(dim <= 0 for dim in dummy_output.shape):
                 raise ModelConfigurationError(
                     f"Feature extractor output collapsed to empty dimensions. "
-                    f"Target spatial dims (128, 94) were reduced below 1x1. Output shape: {dummy_output.shape}"
+                    f"Target spatial dims ({self.config.input_height}, {self.config.input_width}) were reduced below 1x1. Output shape: {dummy_output.shape}"
                 )
                 
             return dummy_output.numel()
@@ -195,7 +196,7 @@ class EmotionCNN(nn.Module):
         Model forward pass.
         
         Args:
-            x (torch.Tensor): Input batch of shape (batch_size, input_channels, 128, 94).
+            x (torch.Tensor): Input batch of shape (batch_size, input_channels, input_height, input_width).
             
         Returns:
             torch.Tensor: Raw logits of shape (batch_size, num_classes).
@@ -210,9 +211,9 @@ class EmotionCNN(nn.Module):
                 f"but got {x.shape[1]} from tensor shape {x.shape}"
             )
             
-        if x.shape[2] != 128 or x.shape[3] != 94:
+        if x.shape[2] != self.config.input_height or x.shape[3] != self.config.input_width:
             raise ValueError(
-                f"Input spatial dimension mismatch. Expected shape (B, C, 128, 94), "
+                f"Input spatial dimension mismatch. Expected shape (B, C, {self.config.input_height}, {self.config.input_width}), "
                 f"but got spatial layout ({x.shape[2]}, {x.shape[3]})"
             )
 

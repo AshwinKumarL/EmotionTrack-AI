@@ -134,6 +134,36 @@ def test_dynamic_flatten_size():
         EmotionCNN(config_c)
 
 
+def test_custom_input_dimensions():
+    """Verify that non-default input_height and input_width are accepted and produce correct shapes."""
+    config = VoiceModelConfig(
+        num_classes=5,
+        input_channels=1,
+        dropout_rate=0.3,
+        filter_sizes=(16, 32),
+        kernel_sizes=(3, 3),
+        pool_sizes=(2, 2),
+        hidden_size=64,
+        input_height=64,
+        input_width=47
+    )
+    assert config.input_height == 64
+    assert config.input_width == 47
+
+    model = EmotionCNN(config)
+    model.eval()
+
+    x = torch.randn(2, 1, 64, 47)
+    with torch.no_grad():
+        logits = model(x)
+
+    assert logits.shape == (2, 5)
+
+    # Wrong spatial dims should raise ValueError
+    with pytest.raises(ValueError):
+        model(torch.randn(2, 1, 128, 94))
+
+
 def test_forward_pass_and_output_shape():
     """Verify that the model processes standard input batches and yields correct shape."""
     config = VoiceModelConfig(

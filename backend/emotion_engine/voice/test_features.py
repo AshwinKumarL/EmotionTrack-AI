@@ -165,7 +165,8 @@ def test_builder_runs_correctly(tmp_path, temp_audio_file):
     assert stats["files_processed"] == 1
     assert stats["files_skipped"] == 1
     assert stats["extraction_failures"] == 0
-    assert stats["feature_dimensions"] != "None"
+    assert stats["feature_dimensions"]
+    assert "(" in stats["feature_dimensions"] and ")" in stats["feature_dimensions"]
     
     # Verify created directories & files
     feature_meta_dir = features_dir / "metadata"

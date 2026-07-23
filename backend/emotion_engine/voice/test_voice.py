@@ -18,6 +18,8 @@ from backend.emotion_engine.voice.dataset import LabelEncoder
 from backend.emotion_engine.voice.model import VoiceModelConfig, EmotionCNN
 from backend.emotion_engine.voice.preprocess import AudioPreprocessor, PeakNormalizer
 from backend.emotion_engine.voice.features import MelSpectrogramExtractor
+from backend.emotion_engine.voice.evaluate import load_trained_model
+from backend.emotion_engine.voice.evaluate_v2 import load_v2_model
 
 # Base target directory for manual testing assets
 TEST_DIR = Path("tests/test_voice")
@@ -78,7 +80,7 @@ def record_audio(duration: float = 3.0, sample_rate: int = 16000) -> Path:
 def load_model(model_path: Path, num_classes: int, device: torch.device) -> EmotionCNN:
     """
     Recreates the CNN architecture and loads the saved model state dict weights.
-    Used for VM/1 checkpoints (bare state_dict format).
+    Delegates to evaluate.load_trained_model for VM/1 checkpoints.
     
     Args:
         model_path (Path): Path to the saved weights file (.pth).
@@ -88,28 +90,8 @@ def load_model(model_path: Path, num_classes: int, device: torch.device) -> Emot
     Returns:
         EmotionCNN: The instantiated and loaded model in eval mode.
     """
-    if not model_path.exists():
-        print(f"Error: Trained model checkpoint not found at: '{model_path}'", file=sys.stderr)
-        print("Please train the model first by running: python backend/emotion_engine/voice/train.py --train", file=sys.stderr)
-        sys.exit(1)
-        
     try:
-        model_config = VoiceModelConfig(
-            num_classes=num_classes,
-            input_channels=1,
-            dropout_rate=0.5,
-            filter_sizes=(32, 64, 128),
-            kernel_sizes=(3, 3, 3),
-            pool_sizes=(2, 2, 2),
-            hidden_size=256
-        )
-        model = EmotionCNN(model_config)
-        
-        state_dict = torch.load(str(model_path), map_location=device)
-        model.load_state_dict(state_dict)
-        model.to(device)
-        model.eval()
-        return model
+        return load_trained_model(model_path, num_classes, device)
     except Exception as e:
         print(f"Error loading trained model weights: {e}", file=sys.stderr)
         sys.exit(1)
@@ -118,9 +100,7 @@ def load_model(model_path: Path, num_classes: int, device: torch.device) -> Emot
 def load_model_v2(model_path: Path, device: torch.device) -> EmotionCNN:
     """
     Loads the VM/2 model from a metadata-rich checkpoint.
-    
-    VM/2 checkpoints contain model_config, emotions, epoch, and optimizer
-    state alongside model weights, unlike VM/1's bare state_dict format.
+    Delegates to evaluate_v2.load_v2_model.
     
     Args:
         model_path (Path): Path to best_voice_model_v2.pth.
@@ -129,28 +109,8 @@ def load_model_v2(model_path: Path, device: torch.device) -> EmotionCNN:
     Returns:
         EmotionCNN: Loaded model in eval mode.
     """
-    if not model_path.exists():
-        print(f"Error: VM/2 checkpoint not found at: '{model_path}'", file=sys.stderr)
-        print("Please train VM/2 first by running: python backend/emotion_engine/voice/train_v2.py --train", file=sys.stderr)
-        sys.exit(1)
-        
     try:
-        checkpoint = torch.load(str(model_path), map_location=device)
-        cfg = checkpoint["model_config"]
-        model_config = VoiceModelConfig(
-            num_classes=cfg["num_classes"],
-            input_channels=cfg["input_channels"],
-            dropout_rate=cfg["dropout_rate"],
-            filter_sizes=tuple(cfg["filter_sizes"]),
-            kernel_sizes=tuple(cfg["kernel_sizes"]),
-            pool_sizes=tuple(cfg["pool_sizes"]),
-            hidden_size=cfg["hidden_size"]
-        )
-        model = EmotionCNN(model_config)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        model.to(device)
-        model.eval()
-        return model
+        return load_v2_model(model_path, device)
     except Exception as e:
         print(f"Error loading VM/2 model weights: {e}", file=sys.stderr)
         sys.exit(1)

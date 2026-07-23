@@ -36,9 +36,9 @@ datasets/features/mel/
 # and required by training scripts.
 
 # ============================================
-# Models - Trained weights and HuggingFace cache
+# HuggingFace model cache
 # ============================================
-models/
+.cache/
 
 # ============================================
 # Reports - Generated evaluation reports

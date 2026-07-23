@@ -1,11 +1,9 @@
-import csv
-import os
 import sys
 import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any
 
 import numpy as np
 import torch
@@ -25,7 +23,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 from backend.emotion_engine.voice.loader import VoiceEngineError
-from backend.emotion_engine.voice.dataset import VoiceDatasetConfig, EmotionDataset, LabelEncoder
+from backend.emotion_engine.voice.dataset import VoiceDatasetConfig, EmotionDataset
 from backend.emotion_engine.voice.model import VoiceModelConfig, EmotionCNN
 from backend.emotion_engine.voice.train import VoiceTrainingConfig, setup_data_loaders
 
